@@ -78,6 +78,9 @@ function setupWebGL() {
 function loadTriangles() {
     var inputTriangles = getJSONFile(INPUT_TRIANGLES_URL,"triangles");
 
+    // DIAGNOSTIC OUTPUT
+    console.log("INPUT TRIANGLES:", inputTriangles);
+
     if (inputTriangles != String.null) { 
         var whichSetVert; // index of vertex in current triangle set
         var whichSetTri; // index of triangle in current triangle set
@@ -88,6 +91,13 @@ function loadTriangles() {
         for (var whichSet=0; whichSet<inputTriangles.length; whichSet++) {
             
             var vertexOffset = coordArray.length / 3;
+
+            // DIAGNOSTIC OUTPUT
+            console.log("--------------------------------------------------");
+            console.log("SET:", whichSet);
+            console.log("VERTEX OFFSET:", vertexOffset);
+            console.log("VERTICES:", inputTriangles[whichSet].vertices);
+            console.log("TRIANGLES FROM INPUT:", inputTriangles[whichSet].triangles);
 
             // set up the vertex coord array
             for (whichSetVert=0; whichSetVert<inputTriangles[whichSet].vertices.length; whichSetVert++){
@@ -103,9 +113,18 @@ function loadTriangles() {
                 indexArray.push(inputTriangles[whichSet].triangles[whichSet][1] + vertexOffset);
                 indexArray.push(inputTriangles[whichSet].triangles[whichSet][2] + vertexOffset);
             }
+
+            // DIAGNOSTIC OUTPUT
+            console.log("CURRENT INDEX ARRAY:", indexArray);
         } // end for each triangle set 
 
-        // console.log(coordArray.length);
+        // DIAGNOSTIC OUTPUT
+        console.log("==================================================");
+        console.log("FINAL VERTEX ARRAY:", coordArray);
+        console.log("FINAL COLOR ARRAY:", colorArray);
+        console.log("FINAL INDEX ARRAY:", indexArray);
+        console.log("FINAL INDEX COUNT:", indexArray.length);
+        console.log("==================================================");
 
         originalVertices = coordArray.slice();
         originalColors = colorArray.slice();
@@ -125,6 +144,9 @@ function loadTriangles() {
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indexArray),gl.STATIC_DRAW);
 
         triBufferSize = indexArray.length;
+
+        // DIAGNOSTIC OUTPUT
+        console.log("triBufferSize:", triBufferSize);
         
     } // end if triangles found
 } // end load triangles
@@ -211,6 +233,9 @@ function renderTriangles() {
     gl.vertexAttribPointer(vertexColorAttrib,3,gl.FLOAT,false,0,0);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,triangleBuffer);
+
+    // DIAGNOSTIC OUTPUT
+    console.log("RENDERING WITH INDEX COUNT:", triBufferSize);
 
     gl.drawElements(gl.TRIANGLES,triBufferSize,gl.UNSIGNED_SHORT,0);
 } // end render triangles
