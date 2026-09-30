@@ -16,8 +16,13 @@ var triBufferSize;
 var vertexPositionAttrib;
 var vertexColorAttrib;
 
+var originalVertices = [];
+var originalColors = [];
+var originalIndices = [];
+var customMode = false;
 
-/* ASSIGNMENT HELPER FUNCTIONS */
+
+// ASSIGNMENT HELPER FUNCTIONS
 
 // get the JSON file from the passed URL
 function getJSONFile(url,descr) {
@@ -72,6 +77,7 @@ function setupWebGL() {
 // read triangles in, load them into webgl buffers
 function loadTriangles() {
     var inputTriangles = getJSONFile(INPUT_TRIANGLES_URL,"triangles");
+
     if (inputTriangles != String.null) { 
         var whichSetVert; // index of vertex in current triangle set
         var whichSetTri; // index of triangle in current triangle set
@@ -82,7 +88,7 @@ function loadTriangles() {
         for (var whichSet=0; whichSet<inputTriangles.length; whichSet++) {
             
             var vertexOffset = coordArray.length / 3;
-            
+
             // set up the vertex coord array
             for (whichSetVert=0; whichSetVert<inputTriangles[whichSet].vertices.length; whichSetVert++){
                 coordArray = coordArray.concat(inputTriangles[whichSet].vertices[whichSetVert]);
@@ -97,10 +103,13 @@ function loadTriangles() {
                 indexArray.push(inputTriangles[whichSet].triangles[whichSet][1] + vertexOffset);
                 indexArray.push(inputTriangles[whichSet].triangles[whichSet][2] + vertexOffset);
             }
-
         } // end for each triangle set 
 
         // console.log(coordArray.length);
+
+        originalVertices = coordArray.slice();
+        originalColors = colorArray.slice();
+        originalIndices = indexArray.slice();
 
         // send the vertex coords to webGL
         vertexBuffer = gl.createBuffer(); // init empty vertex coord buffer
@@ -127,23 +136,23 @@ function setupShaders() {
     var fShaderCode = `
         precision mediump float;
 
-        varying vec3 vertexColor;
+        varying vec3 vColor;
 
         void main(void) {
-            gl_FragColor = vec4(vertexColor, 1.0);
+            gl_FragColor = vec4(vColor, 1.0);
         }
     `;
     
     // define vertex shader in essl using es6 template strings
     var vShaderCode = `
         attribute vec3 vertexPosition;
-        attribute vec3 vertexColor;
+        attribute vec3 color;
 
-        varying vec3 vertexColor;
+        varying vec3 vColor;
 
         void main(void) {
             gl_Position = vec4(vertexPosition, 1.0);
-            vertexColor = vertexColor;
+            vColor = color;
         }
     `;
     
@@ -180,7 +189,7 @@ function setupShaders() {
                 gl.enableVertexAttribArray(vertexPositionAttrib);
 
                 vertexColorAttrib =
-                    gl.getAttribLocation(shaderProgram, "vertexColor");
+                    gl.getAttribLocation(shaderProgram, "color");
                 gl.enableVertexAttribArray(vertexColorAttrib);
             } // end if no shader program link errors
         } // end if no compile errors
@@ -205,6 +214,124 @@ function renderTriangles() {
 
     gl.drawElements(gl.TRIANGLES,triBufferSize,gl.UNSIGNED_SHORT,0);
 } // end render triangles
+
+
+function createCustomImage() {
+
+    var vertices = [];
+    var colors = [];
+    var indices = [];
+
+    var numberOfTriangles = 12;
+    var radius = 0.8;
+
+    for (var i = 0; i < numberOfTriangles; i++) {
+
+        var angle1 = (i / numberOfTriangles) * Math.PI * 2;
+        var angle2 = ((i + 1) / numberOfTriangles) * Math.PI * 2;
+
+        var x1 = Math.cos(angle1) * radius;
+        var y1 = Math.sin(angle1) * radius;
+
+        var x2 = Math.cos(angle2) * radius;
+        var y2 = Math.sin(angle2) * radius;
+
+        var vertexOffset = vertices.length / 3;
+
+        vertices.push(0.0, 0.0, 0.5);
+        vertices.push(x1, y1, 0.5);
+        vertices.push(x2, y2, 0.5);
+
+        var r = 0.5 + 0.5 * Math.cos(angle1);
+        var g = 0.5 + 0.5 * Math.cos(angle1 + 2.094);
+        var b = 0.5 + 0.5 * Math.cos(angle1 + 4.188);
+
+        for (var j = 0; j < 3; j++) {
+            colors.push(r);
+            colors.push(g);
+            colors.push(b);
+        }
+
+        indices.push(vertexOffset);
+        indices.push(vertexOffset + 1);
+        indices.push(vertexOffset + 2);
+    }
+
+    vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+    gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array(vertices),
+        gl.STATIC_DRAW
+    );
+
+    colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,colorBuffer);
+    gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array(colors),
+        gl.STATIC_DRAW
+    );
+
+    triangleBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,triangleBuffer);
+    gl.bufferData(
+        gl.ELEMENT_ARRAY_BUFFER,
+        new Uint16Array(indices),
+        gl.STATIC_DRAW
+    );
+
+    triBufferSize = indices.length;
+}
+
+
+function restoreOriginalImage() {
+
+    vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+    gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array(originalVertices),
+        gl.STATIC_DRAW
+    );
+
+    colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,colorBuffer);
+    gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array(originalColors),
+        gl.STATIC_DRAW
+    );
+
+    triangleBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,triangleBuffer);
+    gl.bufferData(
+        gl.ELEMENT_ARRAY_BUFFER,
+        new Uint16Array(originalIndices),
+        gl.STATIC_DRAW
+    );
+
+    triBufferSize = originalIndices.length;
+}
+
+
+document.addEventListener("keydown", function(event) {
+
+    if (event.code === "Space") {
+
+        event.preventDefault();
+
+        if (customMode) {
+            customMode = false;
+            restoreOriginalImage();
+        } else {
+            customMode = true;
+            createCustomImage();
+        }
+
+        renderTriangles();
+    }
+});
 
 
 /* MAIN -- HERE is where execution begins after window load */
