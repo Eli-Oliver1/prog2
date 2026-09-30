@@ -1,14 +1,19 @@
 /* GLOBAL CONSTANTS AND VARIABLES */
 
 /* assignment specific globals */
-const WIN_Z = 0;  // default graphics window z coord in world space
-const WIN_LEFT = 0; const WIN_RIGHT = 1;  // default left and right x coords in world space
-const WIN_BOTTOM = 0; const WIN_TOP = 1;  // default top and bottom y coords in world space
-const INPUT_TRIANGLES_URL = "https://ncsucgclass.github.io/prog2/triangles.json"; // triangles file loc
-var Eye = new vec4.fromValues(0.5,0.5,-0.5,1.0); // default eye position in world space
+const WIN_Z = 0;
+const WIN_LEFT = 0;
+const WIN_RIGHT = 1;
+const WIN_BOTTOM = 0;
+const WIN_TOP = 1;
 
-/* webgl globals */
-var gl = null; // the all powerful gl object! It's all here folks!
+const INPUT_TRIANGLES_URL =
+    "https://ncsucgclass.github.io/prog2/triangles.json";
+
+var Eye = new vec4.fromValues(0.5, 0.5, -0.5, 1.0);
+
+/* webGL globals */
+var gl = null;
 var vertexBuffer;
 var colorBuffer;
 var triangleBuffer;
@@ -25,91 +30,86 @@ var customMode = false;
 // ASSIGNMENT HELPER FUNCTIONS
 
 // get the JSON file from the passed URL
-function getJSONFile(url,descr) {
+function getJSONFile(url, descr) {
     try {
         if ((typeof(url) !== "string") || (typeof(descr) !== "string"))
             throw "getJSONFile: parameter not a string";
         else {
-            var httpReq = new XMLHttpRequest(); // a new http request
-            httpReq.open("GET",url,false); // init the request
-            httpReq.send(null); // send the request
+            var httpReq = new XMLHttpRequest();
+            httpReq.open("GET", url, false);
+            httpReq.send(null);
+
             var startTime = Date.now();
-            while ((httpReq.status !== 200) && (httpReq.readyState !== XMLHttpRequest.DONE)) {
-                if ((Date.now()-startTime) > 3000)
+            while ((httpReq.status !== 200) &&
+                   (httpReq.readyState !== XMLHttpRequest.DONE)) {
+
+                if ((Date.now() - startTime) > 3000)
                     break;
-            } // until its loaded or we time out after three seconds
-            if ((httpReq.status !== 200) || (httpReq.readyState !== XMLHttpRequest.DONE))
-                throw "Unable to open "+descr+" file!";
+            }
+
+            if ((httpReq.status !== 200) ||
+                (httpReq.readyState !== XMLHttpRequest.DONE))
+                throw "Unable to open " + descr + " file!";
             else
                 return JSON.parse(httpReq.response);
-        } // end if good params
-    } // end try
-
+        }
+    }
     catch(e) {
         console.log(e);
         return(String.null);
     }
-} // end get input spheres
+}
 
 
 // set up the webGL environment
 function setupWebGL() {
 
-    // Get the canvas and context
-    var canvas = document.getElementById("myWebGLCanvas"); // create a js canvas
-    gl = canvas.getContext("webgl"); // get a webgl object from it
+    var canvas = document.getElementById("myWebGLCanvas");
+
+    gl = canvas.getContext("webgl");
 
     try {
         if (gl == null) {
             throw "unable to create gl context -- is your browser gl ready?";
         } else {
-            gl.clearColor(0.0, 0.0, 0.0, 1.0); // use black when we clear the frame buffer
-            gl.clearDepth(1.0); // use max when we clear the depth buffer
-            gl.enable(gl.DEPTH_TEST); // use hidden surface removal (with zbuffering)
-        }
-    } // end try
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clearDepth(1.0);
 
+            gl.enable(gl.DEPTH_TEST);
+
+            // Make sure triangles with either winding direction render
+            gl.disable(gl.CULL_FACE);
+        }
+    }
     catch(e) {
         console.log(e);
-    } // end catch
-
-} // end setupWebGL
+    }
+}
 
 
 // read triangles in, load them into webgl buffers
 function loadTriangles() {
-    var inputTriangles = getJSONFile(INPUT_TRIANGLES_URL,"triangles");
 
-    // DIAGNOSTIC OUTPUT
-    console.log("INPUT TRIANGLES:", inputTriangles);
+    var inputTriangles =
+        getJSONFile(INPUT_TRIANGLES_URL, "triangles");
 
     if (inputTriangles != String.null) {
-        var whichSetVert; // index of vertex in current triangle set
-        var whichSetTri; // index of triangle in current triangle set
-        var coordArray = []; // 1D array of vertex coords for WebGL
+
+        var whichSetVert;
+        var whichSetTri;
+        var coordArray = [];
         var colorArray = [];
         var indexArray = [];
 
-        for (var whichSet=0; whichSet<inputTriangles.length; whichSet++) {
+        for (var whichSet = 0;
+             whichSet < inputTriangles.length;
+             whichSet++) {
 
             var vertexOffset = coordArray.length / 3;
 
-            // DIAGNOSTIC OUTPUT
-            console.log("--------------------------------------------------");
-            console.log("SET:", whichSet);
-            console.log("VERTEX OFFSET:", vertexOffset);
-            console.log(
-                "VERTICES:",
-                JSON.stringify(inputTriangles[whichSet].vertices)
-            );
-            console.log(
-                "TRIANGLES FROM INPUT:",
-                JSON.stringify(inputTriangles[whichSet].triangles)
-            );
-
             // set up the vertex coord array
-            for (whichSetVert=0;
-                 whichSetVert<inputTriangles[whichSet].vertices.length;
+            for (whichSetVert = 0;
+                 whichSetVert < inputTriangles[whichSet].vertices.length;
                  whichSetVert++) {
 
                 coordArray = coordArray.concat(
@@ -122,8 +122,8 @@ function loadTriangles() {
             }
 
             // set up the triangle index array
-            for (whichSetTri=0;
-                 whichSetTri<inputTriangles[whichSet].triangles.length;
+            for (whichSetTri = 0;
+                 whichSetTri < inputTriangles[whichSet].triangles.length;
                  whichSetTri++) {
 
                 indexArray.push(
@@ -141,59 +141,36 @@ function loadTriangles() {
                     + vertexOffset
                 );
             }
-
-            // DIAGNOSTIC OUTPUT
-            console.log(
-                "CURRENT INDEX ARRAY:",
-                JSON.stringify(indexArray)
-            );
-        } // end for each triangle set
-
-        // DIAGNOSTIC OUTPUT
-        console.log("==================================================");
-        console.log(
-            "FINAL VERTEX ARRAY:",
-            JSON.stringify(coordArray)
-        );
-        console.log(
-            "FINAL COLOR ARRAY:",
-            JSON.stringify(colorArray)
-        );
-        console.log(
-            "FINAL INDEX ARRAY:",
-            JSON.stringify(indexArray)
-        );
-        console.log(
-            "FINAL INDEX COUNT:",
-            indexArray.length
-        );
-        console.log("==================================================");
+        }
 
         originalVertices = coordArray.slice();
         originalColors = colorArray.slice();
         originalIndices = indexArray.slice();
 
-        // send the vertex coords to webGL
+        // send the vertex coords to WebGL
         vertexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
         gl.bufferData(
             gl.ARRAY_BUFFER,
             new Float32Array(coordArray),
             gl.STATIC_DRAW
         );
 
-        // send colors to webGL
+        // send colors to WebGL
         colorBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER,colorBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
         gl.bufferData(
             gl.ARRAY_BUFFER,
             new Float32Array(colorArray),
             gl.STATIC_DRAW
         );
 
-        // send triangle indices to webGL
+        // send triangle indices to WebGL
         triangleBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,triangleBuffer);
+        gl.bindBuffer(
+            gl.ELEMENT_ARRAY_BUFFER,
+            triangleBuffer
+        );
         gl.bufferData(
             gl.ELEMENT_ARRAY_BUFFER,
             new Uint16Array(indexArray),
@@ -201,18 +178,14 @@ function loadTriangles() {
         );
 
         triBufferSize = indexArray.length;
-
-        // DIAGNOSTIC OUTPUT
-        console.log("triBufferSize:", triBufferSize);
-
-    } // end if triangles found
-} // end load triangles
+    }
+}
 
 
-// setup the webGL shaders
+// setup the WebGL shaders
 function setupShaders() {
 
-    // define fragment shader in essl using es6 template strings
+    // fragment shader
     var fShaderCode = `
         precision mediump float;
 
@@ -223,7 +196,7 @@ function setupShaders() {
         }
     `;
 
-    // define vertex shader in essl using es6 template strings
+    // vertex shader
     var vShaderCode = `
         attribute vec3 vertexPosition;
         attribute vec3 color;
@@ -237,36 +210,61 @@ function setupShaders() {
     `;
 
     try {
-        // console.log("fragment shader: "+fShaderCode);
         var fShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fShader,fShaderCode);
+
+        gl.shaderSource(
+            fShader,
+            fShaderCode
+        );
+
         gl.compileShader(fShader);
 
-        // console.log("vertex shader: "+vShaderCode);
+
         var vShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vShader,vShaderCode);
+
+        gl.shaderSource(
+            vShader,
+            vShaderCode
+        );
+
         gl.compileShader(vShader);
 
-        if (!gl.getShaderParameter(fShader, gl.COMPILE_STATUS)) {
+
+        if (!gl.getShaderParameter(
+                fShader,
+                gl.COMPILE_STATUS)) {
+
             throw "error during fragment shader compile: "
                 + gl.getShaderInfoLog(fShader);
-            gl.deleteShader(fShader);
 
-        } else if (!gl.getShaderParameter(vShader, gl.COMPILE_STATUS)) {
+        } else if (!gl.getShaderParameter(
+                       vShader,
+                       gl.COMPILE_STATUS)) {
+
             throw "error during vertex shader compile: "
                 + gl.getShaderInfoLog(vShader);
-            gl.deleteShader(vShader);
 
         } else {
 
             var shaderProgram = gl.createProgram();
 
-            gl.attachShader(shaderProgram, fShader);
-            gl.attachShader(shaderProgram, vShader);
+            gl.attachShader(
+                shaderProgram,
+                fShader
+            );
+
+            gl.attachShader(
+                shaderProgram,
+                vShader
+            );
 
             gl.linkProgram(shaderProgram);
 
-            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+
+            if (!gl.getProgramParameter(
+                    shaderProgram,
+                    gl.LINK_STATUS)) {
+
                 throw "error during shader program linking: "
                     + gl.getProgramInfoLog(shaderProgram);
 
@@ -275,23 +273,31 @@ function setupShaders() {
                 gl.useProgram(shaderProgram);
 
                 vertexPositionAttrib =
-                    gl.getAttribLocation(shaderProgram, "vertexPosition");
+                    gl.getAttribLocation(
+                        shaderProgram,
+                        "vertexPosition"
+                    );
 
-                gl.enableVertexAttribArray(vertexPositionAttrib);
+                gl.enableVertexAttribArray(
+                    vertexPositionAttrib
+                );
 
                 vertexColorAttrib =
-                    gl.getAttribLocation(shaderProgram, "color");
+                    gl.getAttribLocation(
+                        shaderProgram,
+                        "color"
+                    );
 
-                gl.enableVertexAttribArray(vertexColorAttrib);
+                gl.enableVertexAttribArray(
+                    vertexColorAttrib
+                );
             }
         }
     }
-
     catch(e) {
         console.log(e);
     }
-
-} // end setup shaders
+}
 
 
 // render the loaded model
@@ -302,7 +308,11 @@ function renderTriangles() {
         gl.DEPTH_BUFFER_BIT
     );
 
-    gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+    // vertex positions
+    gl.bindBuffer(
+        gl.ARRAY_BUFFER,
+        vertexBuffer
+    );
 
     gl.vertexAttribPointer(
         vertexPositionAttrib,
@@ -313,7 +323,11 @@ function renderTriangles() {
         0
     );
 
-    gl.bindBuffer(gl.ARRAY_BUFFER,colorBuffer);
+    // vertex colors
+    gl.bindBuffer(
+        gl.ARRAY_BUFFER,
+        colorBuffer
+    );
 
     gl.vertexAttribPointer(
         vertexColorAttrib,
@@ -324,15 +338,10 @@ function renderTriangles() {
         0
     );
 
+    // triangle indices
     gl.bindBuffer(
         gl.ELEMENT_ARRAY_BUFFER,
         triangleBuffer
-    );
-
-    // DIAGNOSTIC OUTPUT
-    console.log(
-        "RENDERING WITH INDEX COUNT:",
-        triBufferSize
     );
 
     gl.drawElements(
@@ -341,10 +350,10 @@ function renderTriangles() {
         gl.UNSIGNED_SHORT,
         0
     );
+}
 
-} // end render triangles
 
-
+// create custom image
 function createCustomImage() {
 
     var vertices = [];
@@ -354,28 +363,66 @@ function createCustomImage() {
     var numberOfTriangles = 12;
     var radius = 0.8;
 
-    for (var i = 0; i < numberOfTriangles; i++) {
+    for (var i = 0;
+         i < numberOfTriangles;
+         i++) {
 
-        var angle1 = (i / numberOfTriangles) * Math.PI * 2;
-        var angle2 = ((i + 1) / numberOfTriangles) * Math.PI * 2;
+        var angle1 =
+            (i / numberOfTriangles) * Math.PI * 2;
 
-        var x1 = Math.cos(angle1) * radius;
-        var y1 = Math.sin(angle1) * radius;
+        var angle2 =
+            ((i + 1) / numberOfTriangles) *
+            Math.PI * 2;
 
-        var x2 = Math.cos(angle2) * radius;
-        var y2 = Math.sin(angle2) * radius;
+        var x1 =
+            Math.cos(angle1) * radius;
 
-        var vertexOffset = vertices.length / 3;
+        var y1 =
+            Math.sin(angle1) * radius;
 
-        vertices.push(0.0, 0.0, 0.5);
-        vertices.push(x1, y1, 0.5);
-        vertices.push(x2, y2, 0.5);
+        var x2 =
+            Math.cos(angle2) * radius;
 
-        var r = 0.5 + 0.5 * Math.cos(angle1);
-        var g = 0.5 + 0.5 * Math.cos(angle1 + 2.094);
-        var b = 0.5 + 0.5 * Math.cos(angle1 + 4.188);
+        var y2 =
+            Math.sin(angle2) * radius;
 
-        for (var j = 0; j < 3; j++) {
+        var vertexOffset =
+            vertices.length / 3;
+
+        vertices.push(
+            0.0,
+            0.0,
+            0.5
+        );
+
+        vertices.push(
+            x1,
+            y1,
+            0.5
+        );
+
+        vertices.push(
+            x2,
+            y2,
+            0.5
+        );
+
+        var r =
+            0.5 +
+            0.5 * Math.cos(angle1);
+
+        var g =
+            0.5 +
+            0.5 * Math.cos(angle1 + 2.094);
+
+        var b =
+            0.5 +
+            0.5 * Math.cos(angle1 + 4.188);
+
+        for (var j = 0;
+             j < 3;
+             j++) {
+
             colors.push(r);
             colors.push(g);
             colors.push(b);
@@ -386,8 +433,13 @@ function createCustomImage() {
         indices.push(vertexOffset + 2);
     }
 
+    // vertex buffer
     vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+
+    gl.bindBuffer(
+        gl.ARRAY_BUFFER,
+        vertexBuffer
+    );
 
     gl.bufferData(
         gl.ARRAY_BUFFER,
@@ -395,8 +447,13 @@ function createCustomImage() {
         gl.STATIC_DRAW
     );
 
+    // color buffer
     colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER,colorBuffer);
+
+    gl.bindBuffer(
+        gl.ARRAY_BUFFER,
+        colorBuffer
+    );
 
     gl.bufferData(
         gl.ARRAY_BUFFER,
@@ -404,8 +461,13 @@ function createCustomImage() {
         gl.STATIC_DRAW
     );
 
+    // index buffer
     triangleBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,triangleBuffer);
+
+    gl.bindBuffer(
+        gl.ELEMENT_ARRAY_BUFFER,
+        triangleBuffer
+    );
 
     gl.bufferData(
         gl.ELEMENT_ARRAY_BUFFER,
@@ -417,10 +479,16 @@ function createCustomImage() {
 }
 
 
+// restore original image
 function restoreOriginalImage() {
 
+    // vertex buffer
     vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+
+    gl.bindBuffer(
+        gl.ARRAY_BUFFER,
+        vertexBuffer
+    );
 
     gl.bufferData(
         gl.ARRAY_BUFFER,
@@ -428,8 +496,13 @@ function restoreOriginalImage() {
         gl.STATIC_DRAW
     );
 
+    // color buffer
     colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER,colorBuffer);
+
+    gl.bindBuffer(
+        gl.ARRAY_BUFFER,
+        colorBuffer
+    );
 
     gl.bufferData(
         gl.ARRAY_BUFFER,
@@ -437,8 +510,13 @@ function restoreOriginalImage() {
         gl.STATIC_DRAW
     );
 
+    // index buffer
     triangleBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,triangleBuffer);
+
+    gl.bindBuffer(
+        gl.ELEMENT_ARRAY_BUFFER,
+        triangleBuffer
+    );
 
     gl.bufferData(
         gl.ELEMENT_ARRAY_BUFFER,
@@ -450,26 +528,30 @@ function restoreOriginalImage() {
 }
 
 
-document.addEventListener("keydown", function(event) {
+// space bar toggles custom image
+document.addEventListener(
+    "keydown",
+    function(event) {
 
-    if (event.code === "Space") {
+        if (event.code === "Space") {
 
-        event.preventDefault();
+            event.preventDefault();
 
-        if (customMode) {
-            customMode = false;
-            restoreOriginalImage();
-        } else {
-            customMode = true;
-            createCustomImage();
+            if (customMode) {
+                customMode = false;
+                restoreOriginalImage();
+            } else {
+                customMode = true;
+                createCustomImage();
+            }
+
+            renderTriangles();
         }
-
-        renderTriangles();
     }
-});
+);
 
 
-/* MAIN -- HERE is where execution begins after window load */
+/* MAIN */
 
 function main() {
 
@@ -478,4 +560,4 @@ function main() {
     setupShaders();
     renderTriangles();
 
-} // end main
+}
